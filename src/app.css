@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@plugin '@tailwindcss/typography';
+@keyframes typing-loop {
+    0% { width: 0 }
+    50% { width: 8ch }
+    100% { width: 0 }
+}
+
+.animate-typing-loop {
+    width: 8ch;
+    white-space: nowrap;
+    overflow: hidden;
+    border-right: 2px solid white;
+    animation: typing-loop 6s steps(8) infinite;
+}
+
+
