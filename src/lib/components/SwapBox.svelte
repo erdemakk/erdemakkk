@@ -20,7 +20,6 @@
     try {
       const res = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=30&page=1");
       const data = await res.json();
-      console.log('API\'den gelen veri:', data);
       coins = data.map(c => ({
         id: c.id,
         name: c.name,
@@ -29,10 +28,8 @@
         usd: c.current_price
       }));
     } catch (err) {
-      console.error('Failed to fetch coin data:', err);
       coins = [];
     }
-
     recalculate();
   });
 
@@ -40,10 +37,8 @@
     const from = coins.find(c => c.id === fromCoin);
     const to = coins.find(c => c.id === toCoin);
     if (!from || !to) return;
-
     const rate = from.usd / to.usd;
     exchangeRate = rate;
-
     if (activeInput === 'from' && amount && parseFloat(amount) > 0) {
       try {
         const amountBN = ethers.utils.parseEther(amount);
@@ -84,18 +79,14 @@
 
   const handleWalletConnect = async () => {
     await connectWallet();
-    // Cüzdan bağlandığında bakiyeyi başlat.
     balances.set(initialBalance);
   };
 
   const fakeSwap = async () => {
-    // İşlem için yeterli miktar ve hesap bağlı mı kontrolü.
     if (!amount || parseFloat(amount) <= 0 || !result || !$account) {
       alert('Lütfen geçerli bir miktar girin ve cüzdanınızı bağlayın.');
       return;
     }
-
-    // 1. ADIM: Cüzdana imza isteği gönderme
     try {
       if (!$signer) {
         alert("Lütfen önce cüzdanınızı bağlayın.");
@@ -103,113 +94,107 @@
       }
       const message = `Swap işlemi için onay verin: ${amount} ${fromCoin.toUpperCase()} -> ${result} ${toCoin.toUpperCase()}`;
       const signature = await $signer.signMessage(message);
-      console.log("İmza başarılı:", signature);
-
     } catch (err) {
-      console.error("İmza işlemi iptal edildi veya bir hata oluştu:", err);
       alert("İmza işlemi iptal edildi.");
       return;
     }
-
-    // 2. ADIM: Geri kalan swap mantığı (imza başarılıysa çalışır)
     try {
       const amtBN = ethers.utils.parseEther(amount);
       const resValBN = ethers.utils.parseEther(result);
-
-      // Store'dan güncel bakiyeleri alın
       const currentBalances = get(balances);
-
-      // Gönderilecek coinin bakiyesini BigNumber olarak alın.
-      // Eğer bakiye yoksa (undefined), 0 BigNumber'ı kullanın.
       const fromBalanceBN = ethers.BigNumber.from(currentBalances[fromCoin] || '0');
-
       if (fromBalanceBN.lt(amtBN)) {
         alert(`Yetersiz ${fromCoin.toUpperCase()} bakiyesi.`);
         return;
       }
-
-      // Yeni bakiyeleri hesaplayın
       const updated = { ...currentBalances };
-      const newFromBN = fromBalanceBN.sub(amtBN);
-
-      // Alınacak coinin mevcut bakiyesini BigNumber olarak alın.
+      updated[fromCoin] = fromBalanceBN.sub(amtBN);
       const toBalanceBN = ethers.BigNumber.from(currentBalances[toCoin] || '0');
-      const newToBN = toBalanceBN.add(resValBN);
-
-      // Güncellenmiş BigNumber bakiyelerini BigInt'e çevirerek store'a kaydedin
-      // Not: ethers.BigNumber.toBigInt() fonksiyonu olmadığından,
-      // value.toHexString() ile stringe çevirip BigInt() ile tekrar BigInt'e çeviriyoruz.
-      // Ya da, daha basit bir şekilde, BigNumber'ı string'e çevirip store'a kaydedebiliriz.
-      updated[fromCoin] = newFromBN;
-      updated[toCoin] = newToBN;
-
-      // Store'u güncellenmiş BigNumber nesneleriyle güncelleyin
+      updated[toCoin] = toBalanceBN.add(resValBN);
       balances.set(updated);
-
       tradeHistory.update(list => [
         { from: fromCoin, to: toCoin, amount: parseFloat(amount), result: parseFloat(result) },
         ...list
       ]);
-
       successMessage = `Swapped ${amount} ${fromCoin.toUpperCase()} → ${result} ${toCoin.toUpperCase()}`;
       showSuccess = true;
       setTimeout(() => showSuccess = false, 3000);
-
       amount = '';
       result = '';
-
     } catch (err) {
       console.error('Swap error:', err);
     }
   };
 </script>
 
-<div class="relative bg-white p-6 rounded-xl shadow-md space-y-6 max-w-md mx-auto">
-  <h2 class="text-xl font-bold text-center text-gray-800">Swap Coins</h2>
+<div class="relative bg-zinc-800/80 text-gray-200 p-6 rounded-3xl shadow-2xl space-y-4 max-w-sm mx-auto border border-zinc-700">
 
-  <SwapInput
-    bind:selected={fromCoin}
-    bind:amount={amount}
-    {coins}
-    label="Sell"
-    on:input={() => handleInput('from')}
-    on:change={handleCoinChange}
-  />
+  <div class="flex justify-center items-center mb-4">
+    <h2 class="text-xl font-bold text-white text-center">Swap</h2>
+  </div>
 
-  <div class="flex justify-center">
+  <div class="p-4 bg-zinc-700 rounded-2xl border border-transparent hover:border-purple-600 transition-colors duration-200">
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-sm text-gray-400">You sell</span>
+    </div>
+    <SwapInput
+      bind:selected={fromCoin}
+      bind:amount={amount}
+      {coins}
+      label="Sell"
+      on:input={() => handleInput('from')}
+      on:change={handleCoinChange}
+    />
+  </div>
+
+  <div class="flex justify-center my-2">
     <button
-      class="bg-gray-100 hover:bg-gray-200 text-xl rounded-full p-2 transition shadow"
+      class="bg-zinc-600 hover:bg-zinc-500 text-purple-400 rounded-full p-2 transition transform hover:rotate-180 duration-300 shadow-md border border-zinc-700 z-20"
       on:click={swapDirection}
       aria-label="Swap direction"
     >
-      ⬇️
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14M19 12l-7 7-7-7"/>
+      </svg>
     </button>
   </div>
 
-  <SwapInput
-    bind:selected={toCoin}
-    bind:amount={result}
-    {coins}
-    label="Buy"
-    on:input={() => handleInput('to')}
-    on:change={handleCoinChange}
-  />
+  <div class="p-4 bg-zinc-700 rounded-2xl border border-transparent hover:border-purple-600 transition-colors duration-200">
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-sm text-gray-400">You buy</span>
+    </div>
+    <SwapInput
+      bind:selected={toCoin}
+      bind:amount={result}
+      {coins}
+      label="Buy"
+      on:input={() => handleInput('to')}
+      on:change={handleCoinChange}
+    />
+  </div>
+
+  {#if exchangeRate}
+    <div class="text-xs text-gray-400 flex justify-between">
+      <span>Price</span>
+      <span>1 {fromCoin.toUpperCase()} = {exchangeRate.toFixed(6)} {toCoin.toUpperCase()}</span>
+    </div>
+  {/if}
 
   <button
-    class="w-full py-2 px-4 rounded text-white font-semibold transition
-      disabled:cursor-not-allowed disabled:opacity-50
-      bg-pink-500 hover:bg-pink-600"
+    class="w-full py-3 rounded-2xl text-lg font-semibold transition-colors duration-200
+      disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-gray-500
+      bg-purple-600 hover:bg-purple-700 text-white shadow-lg"
     on:click={() => {
       if (!$account) handleWalletConnect();
       else fakeSwap();
     }}
     disabled={!result}
   >
-    {$account ? 'Swap' : 'Connect MetaMask to swap'}
+    {$account ? 'Swap' : 'Connect Wallet'}
   </button>
 
   {#if showSuccess}
-    <div class="mt-4 p-3 text-sm text-green-700 bg-green-100 border border-green-400 rounded text-center">
+    <div class="mt-4 p-4 text-sm text-green-200 bg-green-800 rounded-2xl text-center shadow-inner animate-pulse">
       {successMessage}
     </div>
   {/if}

@@ -4,7 +4,7 @@
   export let selected = '';
   export let amount = '';
   export let coins = [];
-  export let label = ''; // Yeni eklenen özellik
+  export let label = '';
 
   const dispatch = createEventDispatcher();
 
@@ -45,7 +45,7 @@
     : '0.00';
 </script>
 
-<div class="bg-gray-50 p-4 rounded-xl border shadow space-y-2 relative">
+<div class="bg-zinc-800 p-4 rounded-xl border border-zinc-700 shadow space-y-2 relative">
   {#if label}
     <div class="absolute top-2 left-4 text-xs font-semibold text-gray-400">
       {label}
@@ -57,7 +57,7 @@
       type="text"
       inputmode="decimal"
       placeholder="0.00"
-      class="w-full text-2xl outline-none bg-transparent"
+      class="w-full text-2xl outline-none bg-transparent text-white placeholder-gray-500"
       bind:value={amount}
       on:input={handleInput}
     />
@@ -71,7 +71,7 @@
         <select
           bind:value={selected}
           on:change={handleSelectChange}
-          class="appearance-none bg-white border text-sm rounded pr-6 pl-2 py-1"
+          class="appearance-none bg-zinc-700 text-white border-none text-sm rounded pr-6 pl-2 py-1 cursor-pointer"
         >
           {#each coins as coin}
             <option value={coin.id}>
@@ -80,14 +80,14 @@
           {/each}
         </select>
 
-        <div class="absolute inset-y-0 right-1 flex items-center pointer-events-none text-gray-500 text-xs">
+        <div class="absolute inset-y-0 right-1 flex items-center pointer-events-none text-gray-300 text-xs">
           ▼
         </div>
       </div>
     </div>
   </div>
 
-  <div class="text-sm text-gray-500">
+  <div class="text-sm text-gray-400">
     ≈ {formatUSD(usdValue)}
   </div>
 </div>

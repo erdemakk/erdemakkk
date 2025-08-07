@@ -4,25 +4,23 @@
 
   function formatBalance(value) {
     if (value === null || value === undefined) {
-      return '0';
+      return '0.00';
     }
-
-    // ethers.js BigInt değerini doğrudan formatlayabilir.
-    // Başka bir fonksiyona gerek yoktur.
     try {
-      return ethers.utils.formatEther(value);
+      // ethers.js BigNumber objesini formatlayın
+      return ethers.utils.formatUnits(value, 'ether').substring(0, 10);
     } catch (err) {
       console.error('Bakiye formatlama hatası:', err);
-      return '0';
+      return '0.00';
     }
   }
 </script>
 
 {#if $account && Object.keys($balances).length > 0}
-  <div class="absolute top-20 right-4 bg-white shadow-lg rounded-lg p-4 w-60 border z-50">
-    <h3 class="text-md font-bold text-gray-700 mb-2">Your Balances</h3>
+  <div class="fixed top-20 right-4 bg-zinc-800/80 backdrop-blur-lg shadow-lg rounded-xl p-4 w-60 border border-zinc-700 z-50">
+    <h3 class="text-md font-bold text-white mb-2">Your Balances</h3>
 
-    <ul class="space-y-1 text-sm text-gray-800">
+    <ul class="space-y-1 text-sm text-gray-200">
       {#each Object.entries($balances) as [coin, value]}
         <li class="flex justify-between">
           <span class="font-medium">{coin.toUpperCase()}</span>
