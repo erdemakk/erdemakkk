@@ -1,14 +1,8 @@
 <script>
-  import { account, balances, tradeHistory } from '$lib/store';
   import { createEventDispatcher } from 'svelte';
+  import { account, logout } from '$lib/store';
 
   const dispatch = createEventDispatcher();
-
-  const logout = () => {
-    account.set('');
-    balances.set({});
-    tradeHistory.set([]);
-  };
 </script>
 
 <header class="fixed top-0 left-0 w-full z-20 bg-zinc-900 text-white flex items-center justify-between px-4 py-3 border-b border-zinc-700 shadow-md">

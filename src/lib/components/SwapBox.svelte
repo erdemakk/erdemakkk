@@ -4,7 +4,7 @@
   import { connectWallet } from '$lib/helpers/wallet';
   import { get } from 'svelte/store';
   import SwapInput from './SwapInput.svelte';
-  import { ethers } from 'ethers';
+  import { parseUnits, formatUnits } from 'viem';
 
   let coins = [];
   let fromCoin = 'tether';
@@ -33,27 +33,39 @@
     recalculate();
   });
 
+    const SCALE = 1_000_000n;
+    const DECIMALS = 18;
+
+    const toBigIntSafe = (v) => {
+      if (typeof v === 'bigint') return v;
+      if (typeof v === 'number') return BigInt(Math.trunc(v));
+      if (typeof v === 'string') return v.length ? BigInt(v) : 0n;
+      return 0n;
+    };
+
   const recalculate = () => {
     const from = coins.find(c => c.id === fromCoin);
     const to = coins.find(c => c.id === toCoin);
     if (!from || !to) return;
-    const rate = from.usd / to.usd;
+
+    const rate = from.usd / to.usd; // number
     exchangeRate = rate;
-    if (activeInput === 'from' && amount && parseFloat(amount) > 0) {
+
+    if (activeInput === "from" && amount && parseFloat(amount) > 0) {
       try {
-        const amountBN = ethers.utils.parseEther(amount);
-        const rateBN = ethers.BigNumber.from(Math.floor(rate * 1e6));
-        const resultBN = amountBN.mul(rateBN).div(ethers.BigNumber.from(1e6));
-        result = ethers.utils.formatEther(resultBN);
+        const amountBI = parseUnits(amount, DECIMALS);
+        const rateBI = BigInt(Math.floor(rate * 1e6));
+        const resultBI = (amountBI * rateBI) / SCALE;
+        result = formatUnits(resultBI, DECIMALS);
       } catch (err) {
         result = '';
       }
     } else if (activeInput === 'to' && result && parseFloat(result) > 0) {
       try {
-        const resultBN = ethers.utils.parseEther(result);
-        const inverseRateBN = ethers.BigNumber.from(Math.floor((1 / rate) * 1e6));
-        const amountBN = resultBN.mul(inverseRateBN).div(ethers.BigNumber.from(1e6));
-        amount = ethers.utils.formatEther(amountBN);
+        const resultBI = parseUnits(result, DECIMALS);
+        const inverseRateBI = BigInt(Math.floor((1 / rate) * 1e6));
+        const amountBI = (resultBI * inverseRateBI) / SCALE;
+        amount = formatUnits(amountBI, DECIMALS);
       } catch (err) {
         amount = '';
       }
@@ -92,33 +104,41 @@
         alert("Lütfen önce cüzdanınızı bağlayın.");
         return;
       }
-      const message = `Swap işlemi için onay verin: ${amount} ${fromCoin.toUpperCase()} -> ${result} ${toCoin.toUpperCase()}`;
-      const signature = await $signer.signMessage(message);
+      await $signer.signMessage({
+        account: $account,
+        message: `Swap işlemi için onay verin: ${amount} ${fromCoin.toUpperCase()} -> ${result} ${toCoin.toUpperCase()}`
+      });
     } catch (err) {
       alert("İmza işlemi iptal edildi.");
       return;
     }
     try {
-      const amtBN = ethers.utils.parseEther(amount);
-      const resValBN = ethers.utils.parseEther(result);
+      const amtBI = parseUnits(amount, DECIMALS);
+      const resBI = parseUnits(result, DECIMALS);
+
       const currentBalances = get(balances);
-      const fromBalanceBN = ethers.BigNumber.from(currentBalances[fromCoin] || '0');
-      if (fromBalanceBN.lt(amtBN)) {
+      const fromBalanceBI = toBigIntSafe(currentBalances[fromCoin] ?? 0n);
+      const toBalanceBI = toBigIntSafe(currentBalances[toCoin] ?? 0n);
+
+      if (fromBalanceBI < amtBI) {
         alert(`Yetersiz ${fromCoin.toUpperCase()} bakiyesi.`);
         return;
       }
+
       const updated = { ...currentBalances };
-      updated[fromCoin] = fromBalanceBN.sub(amtBN);
-      const toBalanceBN = ethers.BigNumber.from(currentBalances[toCoin] || '0');
-      updated[toCoin] = toBalanceBN.add(resValBN);
+      updated[fromCoin] = fromBalanceBI - amtBI;
+      updated[toCoin] = toBalanceBI + resBI;
+
       balances.set(updated);
+
       tradeHistory.update(list => [
         { from: fromCoin, to: toCoin, amount: parseFloat(amount), result: parseFloat(result) },
         ...list
       ]);
+
       successMessage = `Swapped ${amount} ${fromCoin.toUpperCase()} → ${result} ${toCoin.toUpperCase()}`;
       showSuccess = true;
-      setTimeout(() => showSuccess = false, 3000);
+      setTimeout(() => (showSuccess = false), 3000);
       amount = '';
       result = '';
     } catch (err) {
@@ -135,7 +155,7 @@
 
   <div class="p-4 bg-zinc-700 rounded-2xl border border-transparent hover:border-purple-600 transition-colors duration-200">
     <div class="flex justify-between items-center mb-2">
-      <span class="text-sm text-gray-400">You sell</span>
+      <span class="text-sm text-gray-400"></span>
     </div>
     <SwapInput
       bind:selected={fromCoin}
@@ -161,7 +181,7 @@
 
   <div class="p-4 bg-zinc-700 rounded-2xl border border-transparent hover:border-purple-600 transition-colors duration-200">
     <div class="flex justify-between items-center mb-2">
-      <span class="text-sm text-gray-400">You buy</span>
+      <span class="text-sm text-gray-400"></span>
     </div>
     <SwapInput
       bind:selected={toCoin}

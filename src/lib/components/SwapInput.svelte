@@ -8,28 +8,28 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleInput(e) {
+  const handleInput = (e) => {
     const raw = e.target.value.replace(',', '.');
     amount = raw;
     dispatch('input');
-  }
+  };
 
-  function handleSelectChange(e) {
+  const handleSelectChange = (e) => {
     selected = e.target.value;
     dispatch('input');
-  }
+  };
 
-  function getLogo(id) {
+  const getLogo = (id) => {
     const coin = coins.find(c => c.id === id);
     return coin?.image || '';
-  }
+  };
 
-  function getUSDPrice(id) {
+  const getUSDPrice = (id) => {
     const coin = coins.find(c => c.id === id);
     return coin?.usd || 0;
-  }
+  };
 
-  function formatUSD(value) {
+  const formatUSD = (value) => {
     const num = Number(value);
     if (isNaN(num)) return '$0,00';
     return num.toLocaleString('tr-TR', {
@@ -38,7 +38,7 @@
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
-  }
+  };
 
   $: usdValue = amount && getUSDPrice(selected)
     ? (parseFloat(amount) * getUSDPrice(selected)).toFixed(2)

@@ -1,19 +1,24 @@
 <script>
   import { balances, account } from '$lib/store';
-  import { ethers } from 'ethers';
+  import { formatUnits } from 'viem';
 
-  function formatBalance(value) {
-    if (value === null || value === undefined) {
-      return '0.00';
-    }
+  const toBigIntSafe = (v) => {
+    if (typeof v === 'bigint') return v;
+    if (typeof v === 'number') return BigInt(Math.trunc(v));
+    if (typeof v === 'string') return v.length ? BigInt(v) : 0n;
+    return 0n;
+  };
+
+  const formatBalance = (value) => {
     try {
-      // ethers.js BigNumber objesini formatlayın
-      return ethers.utils.formatUnits(value, 'ether').substring(0, 10);
+      const bi = toBigIntSafe(value);
+      const asStr = formatUnits(bi, 18);
+      return asStr.length > 10 ? asStr.slice(0, 10) : asStr;
     } catch (err) {
       console.error('Bakiye formatlama hatası:', err);
       return '0.00';
     }
-  }
+  };
 </script>
 
 {#if $account && Object.keys($balances).length > 0}
